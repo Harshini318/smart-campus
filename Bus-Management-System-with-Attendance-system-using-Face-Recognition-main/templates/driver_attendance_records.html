@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Records - Driver</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: rgba(255,255,255,0.95); }
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-primary { background: linear-gradient(45deg, #667eea, #764ba2); border: none; border-radius: 25px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('driver_dashboard') }}"><i class="fas fa-bus"></i> Smart Campus Transit</a>
+            <a class="nav-link" href="{{ url_for('driver_dashboard') }}">Dashboard</a>
+            <a class="nav-link" href="{{ url_for('driver_attendance') }}">Mark Attendance</a>
+            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fas fa-clipboard-list"></i> Attendance Records {% if my_route %}({{ my_route.route_name }}){% endif %}</h4>
+                <form method="get" class="row g-3 mb-3">
+                    <div class="col-md-2"><label class="form-label">From</label><input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}"></div>
+                    <div class="col-md-2"><label class="form-label">To</label><input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}"></div>
+                    <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary">Filter</button></div>
+                    <div class="col-md-2 d-flex align-items-end"><a href="{{ url_for('driver_attendance_records', date_from=request.args.get('date_from'), date_to=request.args.get('date_to'), export='excel') }}" class="btn btn-success btn-sm">Download Excel</a></div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead><tr><th>Date</th><th>Boarding Time</th><th>Drop Time</th><th>Student</th><th>Roll No</th><th>Department</th><th>Year</th><th>Pass No</th><th>Status</th><th>Verification</th></tr></thead>
+                        <tbody>
+                            {% for r in records %}
+                            <tr>
+                                <td>{{ r.date }}</td>
+                                <td>{{ r.boarding_time or '-' }}</td>
+                                <td>{{ r.drop_time or '-' }}</td>
+                                <td>{{ r.name }}</td>
+                                <td>{{ r.roll_number or '-' }}</td>
+                                <td>{{ r.department or '-' }}</td>
+                                <td>{{ r.year or '-' }}</td>
+                                <td>{{ r.pass_number or '-' }}</td>
+                                <td>
+                                    {% if r.status == 'present' %}
+                                        <span class="badge bg-success">Present</span>
+                                    {% elif r.status == 'completed' %}
+                                        <span class="badge bg-primary">Completed</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ r.status or '-' }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.verification_type or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="9" class="text-muted">No attendance records found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+opencv-python
+face-recognition
+numpy
+Pillow
+Flask
+dlib
+requests
+openpyxl

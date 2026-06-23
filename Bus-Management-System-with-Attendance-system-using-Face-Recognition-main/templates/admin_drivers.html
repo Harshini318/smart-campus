@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Drivers - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: rgba(255,255,255,0.95); box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-primary { background: linear-gradient(45deg, #667eea, #764ba2); border: none; border-radius: 25px; font-weight: 600; }
+        .table th { background: #667eea; color: white; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-bus"></i> Smart Campus Transit</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                <a class="nav-link" href="{{ url_for('admin_routes') }}">Routes</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add New Driver -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4><i class="fas fa-user-plus"></i> Add New Driver</h4>
+                <form method="POST" action="{{ url_for('admin_add_driver') }}">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Username *</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" name="phone_number" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Assign Route</label>
+                            <select name="route_id" class="form-control">
+                                <option value="">-- No Route --</option>
+                                {% for route in routes %}
+                                <option value="{{ route.route_id }}">{{ route.route_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Driver
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Drivers List -->
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fas fa-users-cog"></i> All Drivers</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Phone Number</th>
+                                <th>Assigned Route</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for driver in drivers %}
+                            <tr>
+                                <td>{{ driver.user_id }}</td>
+                                <td>{{ driver.username }}</td>
+                                <td>{{ driver.phone_number or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('admin_assign_route_to_driver') }}" class="d-flex align-items-center">
+                                        <input type="hidden" name="driver_id" value="{{ driver.user_id }}">
+                                        <select name="route_id" class="form-select form-select-sm me-2" style="width: 150px;">
+                                            <option value="">-- No Route --</option>
+                                            {% for route in routes %}
+                                            <option value="{{ route.route_id }}" {% if driver.route_id == route.route_id %}selected{% endif %}>
+                                                {{ route.route_name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteDriver({{ driver.user_id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-muted text-center">No drivers found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function deleteDriver(driverId) {
+            if (confirm('Are you sure you want to delete this driver?')) {
+                $.post('/admin/delete_driver/' + driverId, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.error || 'Failed to delete driver');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

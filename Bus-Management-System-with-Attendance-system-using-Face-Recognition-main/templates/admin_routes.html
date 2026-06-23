@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Management - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: rgba(255,255,255,0.95); }
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-primary { background: linear-gradient(45deg, #667eea, #764ba2); border: none; border-radius: 25px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-bus"></i> Smart Campus Transit</a>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+            <a class="nav-link" href="{{ url_for('admin_routes') }}">Routes</a>
+            <a class="nav-link" href="{{ url_for('admin_students') }}">Students</a>
+            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title"><i class="fas fa-route"></i> Route Management</h4>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}{% for c, m in messages %}<div class="alert alert-{{ 'success' if c == 'success' else 'danger' }}">{{ m }}</div>{% endfor %}{% endif %}
+                {% endwith %}
+                <a href="{{ url_for('admin_route_add') }}" class="btn btn-primary mb-3"><i class="fas fa-plus"></i> Add Route</a>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr><th>ID</th><th>Route Name</th><th>Start</th><th>End</th><th>Assigned Driver</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for r in routes %}
+                            <tr>
+                                <td>{{ r.route_id }}</td>
+                                <td>{{ r.route_name }}</td>
+                                <td>{{ r.start_point or '-' }}</td>
+                                <td>{{ r.end_point or '-' }}</td>
+                                <td>{{ r.driver_username or '-' }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin_route_edit', route_id=r.route_id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteRoute({{ r.route_id }})">Delete</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-muted">No routes. Add one above.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function deleteRoute(id) {
+            if (!confirm('Delete this route?')) return;
+            $.post('{{ url_for("admin_route_delete", route_id=0) }}'.replace('/0/', '/' + id + '/'), function(r) {
+                if (r.success) location.reload();
+                else alert('Failed');
+            });
+        }
+    </script>
+</body>
+</html>

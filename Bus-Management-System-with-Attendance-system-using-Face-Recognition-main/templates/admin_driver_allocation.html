@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Allocation - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: rgba(255,255,255,0.95); box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+        .card { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-primary { background: linear-gradient(45deg, #667eea, #764ba2); border: none; border-radius: 25px; font-weight: 600; }
+        .table th { background: #667eea; color: white; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-bus"></i> Smart Campus Transit</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                <a class="nav-link" href="{{ url_for('admin_routes') }}">Routes</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4><i class="fas fa-user-cog"></i> Allocate Driver to Students</h4>
+                <p class="text-muted">Assign drivers to students based on their routes</p>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-road"></i> Select Route</label>
+                        <select id="routeSelect" class="form-control" onchange="filterStudents()">
+                            <option value="">-- All Routes --</option>
+                            {% for route in routes %}
+                            <option value="{{ route.route_id }}" data-driver="{{ route.driver_id or '' }}">
+                                {{ route.route_name }} {% if route.driver_username %}(Driver: {{ route.driver_username }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-user-tie"></i> Select Driver</label>
+                        <select id="driverSelect" class="form-control">
+                            <option value="">-- Select Driver --</option>
+                            {% for driver in drivers %}
+                            <option value="{{ driver.user_id }}">{{ driver.username }} ({{ driver.phone_number or 'No phone' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                                <th>Student Name</th>
+                                <th>Roll Number</th>
+                                <th>Department</th>
+                                <th>Current Route</th>
+                                <th>Assigned Driver</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsList">
+                            {% for student in students %}
+                            <tr data-route="{{ student.route_id or '' }}">
+                                <td><input type="checkbox" class="student-check" value="{{ student.student_id }}"></td>
+                                <td>{{ student.name }}</td>
+                                <td>{{ student.roll_number or '-' }}</td>
+                                <td>{{ student.department or '-' }}</td>
+                                <td>{{ student.route_name or 'Not Assigned' }}</td>
+                                <td>{{ student.driver_username or 'Not Assigned' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-muted text-center">No students found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Assign Selected Students to Route:</label>
+                        <select id="assignRoute" class="form-control">
+                            <option value="">-- Select Route --</option>
+                            {% for route in routes %}
+                            <option value="{{ route.route_id }}">{{ route.route_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary" onclick="assignStudentsToRoute()">
+                            <i class="fas fa-save"></i> Assign to Route
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assign Driver to Route -->
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fas fa-bus"></i> Assign Driver to Route</h4>
+                <form method="POST" action="{{ url_for('admin_assign_driver_route') }}">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <label class="form-label">Route</label>
+                            <select name="route_id" class="form-control" required>
+                                <option value="">-- Select Route --</option>
+                                {% for route in routes %}
+                                <option value="{{ route.route_id }}">{{ route.route_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Driver</label>
+                            <select name="driver_id" class="form-control" required>
+                                <option value="">-- Select Driver --</option>
+                                {% for driver in drivers %}
+                                <option value="{{ driver.user_id }}">{{ driver.username }} ({{ driver.phone_number or 'No phone' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-link"></i> Assign
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSelectAll() {
+            var checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.student-check').forEach(function(cb) {
+                cb.checked = checked;
+            });
+        }
+
+        function filterStudents() {
+            var routeId = document.getElementById('routeSelect').value;
+            document.querySelectorAll('#studentsList tr').forEach(function(row) {
+                if (!routeId || row.dataset.route === routeId) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function assignStudentsToRoute() {
+            var routeId = document.getElementById('assignRoute').value;
+            if (!routeId) {
+                alert('Please select a route');
+                return;
+            }
+            var studentIds = [];
+            document.querySelectorAll('.student-check:checked').forEach(function(cb) {
+                studentIds.push(cb.value);
+            });
+            if (studentIds.length === 0) {
+                alert('Please select at least one student');
+                return;
+            }
+            $.post('/admin/assign_students_route', {
+                route_id: routeId,
+                student_ids: JSON.stringify(studentIds)
+            }, function(response) {
+                if (response.success) {
+                    alert('Students assigned successfully!');
+                    location.reload();
+                } else {
+                    alert(response.error || 'Failed to assign students');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

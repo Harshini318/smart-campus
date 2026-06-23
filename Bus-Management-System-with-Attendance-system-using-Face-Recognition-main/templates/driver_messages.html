@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - Driver Dashboard | Smart Campus Transit System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        .message-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .message-bubble {
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .message-parent {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            margin-left: 20px;
+        }
+        .message-driver {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-right: 20px;
+        }
+        .student-filter {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        .student-badge {
+            background: linear-gradient(45deg, #ffc107, #ff6b6b);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+                <i class="fas fa-bus text-primary"></i> Smart Campus Transit
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('driver_dashboard') }}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a class="nav-link" href="{{ url_for('driver_messages') }}">
+                    <i class="fas fa-envelope"></i> Messages
+                </a>
+                <a class="nav-link" href="{{ url_for('driver_attendance') }}">
+                    <i class="fas fa-user-check"></i> Attendance
+                </a>
+                <a class="nav-link" href="{{ url_for('driver_send_parent_notification') }}">
+                    <i class="fas fa-paper-plane"></i> Send Message
+                </a>
+                <a class="nav-link text-danger" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="message-card text-center">
+                    <h2 class="mb-3">
+                        <i class="fas fa-comments"></i> Messages from Parents
+                    </h2>
+                    <p class="text-muted">View and manage conversations with parents</p>
+                </div>
+
+                <!-- Student Filter -->
+                {% if students %}
+                <div class="student-filter">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-filter"></i> Filter by Student:
+                            </label>
+                            <select class="form-select" id="studentFilter">
+                                <option value="">All Students</option>
+                                {% for student in students %}
+                                <option value="{{ student.student_id }}">
+                                    {{ student.name }} ({{ student.roll_number }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-primary" onclick="filterMessages('all')">
+                                    <i class="fas fa-inbox"></i> All Messages
+                                </button>
+                                <button class="btn btn-outline-success" onclick="filterMessages('parent')">
+                                    <i class="fas fa-user"></i> From Parents
+                                </button>
+                                <button class="btn btn-outline-info" onclick="filterMessages('driver')">
+                                    <i class="fas fa-user-tie"></i> From Driver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="message-card" 
+                         data-student-id="{{ message.student_id }}" 
+                         data-sender-type="{{ message.sender_type }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="student-badge">
+                                    <i class="fas fa-user-graduate"></i> 
+                                    {{ message.student_name }} ({{ message.roll_number }})
+                                </span>
+                                {% if message.route_name %}
+                                <span class="badge bg-info ms-2">
+                                    <i class="fas fa-route"></i> {{ message.route_name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <small class="message-time">
+                                <i class="fas fa-clock"></i> 
+                                {{ message.formatted_time[:16] }}
+                            </small>
+                        </div>
+                        
+                        <div class="message-bubble {{ 'message-parent' if message.sender_type == 'parent' else 'message-driver' }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>
+                                        <i class="fas fa-{{ 'user' if message.sender_type == 'parent' else 'user-tie' }}"></i>
+                                        {{ 'Parent' if message.sender_type == 'parent' else 'Driver' }}
+                                    </strong>
+                                    <div class="mt-2">
+                                        {{ message.message }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="message-card text-center">
+                    <div class="py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Messages Yet</h4>
+                        <p class="text-muted">Parents haven't sent any messages. When they do, they'll appear here.</p>
+                        <a href="{{ url_for('driver_send_parent_notification') }}" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Message to Parent
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filterMessages(type) {
+            const messages = document.querySelectorAll('.message-card');
+            messages.forEach(msg => {
+                if (type === 'all') {
+                    msg.style.display = 'block';
+                } else {
+                    const senderType = msg.getAttribute('data-sender-type');
+                    msg.style.display = senderType === type ? 'block' : 'none';
+                }
+            });
+        }
+
+        document.getElementById('studentFilter')?.addEventListener('change', function(e) {
+            const studentId = e.target.value;
+            const messages = document.querySelectorAll('.message-card');
+            
+            messages.forEach(msg => {
+                if (!studentId) {
+                    msg.style.display = 'block';
+                } else {
+                    const msgStudentId = msg.getAttribute('data-student-id');
+                    msg.style.display = msgStudentId === studentId ? 'block' : 'none';
+                }
+            });
+        });
+
+        // Auto-refresh messages every 30 seconds
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>
